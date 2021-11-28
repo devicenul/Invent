@@ -1,5 +1,5 @@
 #include <Arduino.h>
-#include <LiquidCrsytal.h> // Header for LCD library
+#include <LiquidCrystal.h> // Header for LCD library
 
 const int MAX_SPRAYS = 10;      // Number of sprays when refilled
 
@@ -32,8 +32,8 @@ void setup() {
     // these temporarily interrupt loop() to perform the needed acctions
     // then return to loop() where it left off -
     // FALLING means when the button is released after being pressed
-    attachInterrupt(digitalPintToInterrupt(RESET_INT_PIN), doReset, FALLING);
-    attachInterrupt(digitalPintToInterrupt(DISPLAY_INT_PIN), doDisplay, FALLING);
+    attachInterrupt(digitalPinToInterrupt(RESET_INT_PIN), doReset, FALLING);
+    attachInterrupt(digitalPinToInterrupt(DISPLAY_INT_PIN), doDisplay, FALLING);
 
     // Set our spray control pin to be output mode and turn the relay off
     pinMode(SPRAY_RELAY_PIN, OUTPUT);
@@ -46,7 +46,7 @@ void setup() {
 
 void loop() {
 
-    if spraysRemaining > 0 {
+    if (spraysRemaining > 0) {
         // Do spraying process
         delay(PRE_SPRAY_TIME);
         turnOnSpray();
@@ -68,20 +68,21 @@ void loop() {
 
 void turnOnSpray() {
     digitalWrite(SPRAY_RELAY_PIN, HIGH); // Turn on the pin to allow power to flow
-                                         // through the relay to the spray pump
+    // through the relay to the spray pump
 }
 
 void turnOffSpray() {
     digitalWrite(SPRAY_RELAY_PIN, LOW); // Turn off the pin to stop power flow
-                                        // through the relay to the spray pump
+    // through the relay to the spray pump
 }
 
 void turnOnDisplay() {
+    char buffer[17];
     lcd.display(); // Turn on the display
     lcd.setCursor(0,0); // Line one, column one
     if (spraysRemaining > 0) {
         // Show number of sprays left
-        lcd.printf("Sprays left: %d", spraysRemaining)
+        lcd.print(snprintf(buffer, 16, "Sprays left: %d", spraysRemaining));
     } else {
         // Tell them to refill
         lcd.print("No sprays remaining.");
