@@ -8,16 +8,17 @@ const byte DISPLAY_INT_PIN = 3; // Pin for INT.1 to get display button
 
 const byte SPRAY_RELAY_PIN = 7; // Pin to control power relay to spray
 
-const int PRE_SPRAY_TIME     = 1000 * 60; // ms * seconds = 1 minute
-const int LONG_DISPLAY_TIME  = 1000 * 60; // ms * seconds = 1 minute
-const int SHORT_DISPLAY_TIME = 1000 * 10; // ms * seconds = 10s
-const int SPRAY_TIME         = 1000 * 30; // ms * seconds = 30s
-const int SPRAY_WAIT         = 1000 * 14 * 24 * 60 * 60; // ms * days * hours * minutes * seconds = 2 weeks
+const unsigned long PRE_SPRAY_TIME     = 1000UL * 60; // ms * seconds = 1 minute
+const unsigned long LONG_DISPLAY_TIME  = 1000UL * 60; // ms * seconds = 1 minute
+const unsigned long SHORT_DISPLAY_TIME = 1000UL * 10; // ms * seconds = 10s
+const unsigned long SPRAY_TIME         = 1000UL * 30; // ms * seconds = 30s
+//const unsigned long SPRAY_WAIT         = 1000UL * 14 * 24 * 60 * 60; // ms * days * hours * minutes * seconds = 2 weeks
+const unsigned long SPRAY_WAIT         = 1000UL * 30;
+const unsigned long NO_SPRAY_WAIT      = 1000UL * 30;
 
 volatile int spraysRemaining;   // Number of sprays remaining - may be changed by interrupts so volatile
 
 // Initialize the LCD library with the numbers of the interface pins
-//LiquidCrystal lcd(7, 8, 9, 10, 11, 12);
 LiquidCrystal lcd(4, 6, 10, 11, 12, 13);
 
 void setup() {
@@ -42,6 +43,12 @@ void setup() {
     // Init LCD and turn off display
     lcd.begin(16,2);
     lcd.noDisplay();
+
+    //DEBUG
+    lcd.display();
+    lcd.setCursor(0,0);
+    lcd.print("Setup done");
+    delay(10000);
 }
 
 void loop() {
@@ -62,11 +69,17 @@ void loop() {
 
         // Wait a long period before spraying again
         delay(SPRAY_WAIT);
+    } else {
+        // Wait a short period before checking the remaining sprays again
+        delay(NO_SPRAY_WAIT);
     }
 
 }
 
 void turnOnSpray() {
+    lcd.clear();
+    lcd.display();
+    lcd.print("SPRAYING SPRAYING");
     digitalWrite(SPRAY_RELAY_PIN, HIGH); // Turn on the pin to allow power to flow
     // through the relay to the spray pump
 }
@@ -74,15 +87,18 @@ void turnOnSpray() {
 void turnOffSpray() {
     digitalWrite(SPRAY_RELAY_PIN, LOW); // Turn off the pin to stop power flow
     // through the relay to the spray pump
+    lcd.noDisplay();
 }
 
 void turnOnDisplay() {
     char buffer[17];
     lcd.display(); // Turn on the display
+    lcd.clear();
     lcd.setCursor(0,0); // Line one, column one
     if (spraysRemaining > 0) {
         // Show number of sprays left
-        lcd.print(snprintf(buffer, 16, "Sprays left: %d", spraysRemaining));
+        snprintf(buffer, 16, "Sprays left: %d", spraysRemaining);
+        lcd.print(buffer);
     } else {
         // Tell them to refill
         lcd.print("No sprays remaining.");
