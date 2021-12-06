@@ -1,14 +1,16 @@
 #include <Arduino.h>
 #include <LiquidCrystal.h> // Header for LCD library
 
+#define SERIAL_DEBUG
+
 const int MAX_SPRAYS = 10;      // Number of sprays when refilled
 
-const byte RESET_PIN = 2;   // Pin for reset button
+const byte RESET_PIN = 5;   // Pin for reset button
 const byte DISPLAY_PIN = 3; // Pin for display button
 
 const byte SPRAY_RELAY_PIN = 7; // Pin to control power relay to spray
 
-const unsigned long DEBOUNCE_DELAY = 50UL; // Value to filture button bounces
+const unsigned long DEBOUNCE_DELAY = 500UL; // Value to filture button bounces
 
 const unsigned long PRE_SPRAY_TIME     = 1000UL * 60; // ms * seconds = 1 minute
 const unsigned long POST_SPRAY_TIME    = 1000UL * 60; // ms * seconds = 1 minute
@@ -27,12 +29,13 @@ const int WAITING_STATE = 3;
 int currentState;
 
 // Variables for keeping track of button presses and debouncing them
-int lastResetButtonState = LOW;
-int lastDisplayButtonState = LOW;
+int lastResetButtonState = HIGH;
+int lastDisplayButtonState = HIGH;
 unsigned long lastResetButtonDebounceTime = 0UL;
 unsigned long lastDisplayButtonDebounceTime = 0UL;
 
 // Time variables for tracking passage of time without using delay()
+unsigned long nowMillis;
 unsigned long lastLoopMillis;
 long remainingStateMillis;
 
@@ -55,8 +58,8 @@ void setup() {
     currentState = PRE_SPRAY_STATE;
 
     // Set our button pins to be input mode
-    pinMode(RESET_PIN, INPUT);
-    pinMode(DISPLAY_PIN, INPUT);
+    pinMode(RESET_PIN, INPUT_PULLUP);
+    pinMode(DISPLAY_PIN, INPUT_PULLUP);
 
     // Set our spray control pin to be output mode
     // and turn the relay off by setting it to low
@@ -80,8 +83,10 @@ void setup() {
 void loop() {
     //debug("loop");
 
+    nowMillis = millis();
+
     if (displayOn) {
-        remainingDisplayTime -= (millis() - lastLoopMillis);
+        remainingDisplayTime -= (nowMillis - lastLoopMillis);
         if (remainingDisplayTime <= 0) {
             turnOffDisplay();
             displayOn = false;
@@ -107,13 +112,13 @@ void loop() {
 
     doCheckButtons();
 
-    lastLoopMillis = millis();
+    lastLoopMillis = nowMillis;
 }
 
 void preSprayState() {
     debug("prespray");
     // Reduce remaining time by the delta used by the last loop
-    remainingStateMillis -= (millis() - lastLoopMillis);
+    remainingStateMillis -= (nowMillis - lastLoopMillis);
     if (remainingStateMillis <= 0) {
         // Transition to next state if this state's time has expired
         currentState = SPRAYING_STATE;
@@ -127,7 +132,7 @@ void sprayingState() {
     if (remainingStateMillis == SPRAY_TIME) {
         turnOnSpray();
     }
-    remainingStateMillis -= (millis() - lastLoopMillis);
+    remainingStateMillis -= (nowMillis - lastLoopMillis);
     if (remainingStateMillis <= 0) {
         // Transition to next state as this state's time has expired
         turnOffSpray();
@@ -143,7 +148,7 @@ void postSprayState() {
         spraysRemaining--;
         turnOnDisplay();
     }
-    remainingStateMillis -= (millis() - lastLoopMillis);
+    remainingStateMillis -= (nowMillis - lastLoopMillis);
     if (remainingStateMillis <= 0) {
         // Transition to next state as this state's time has expired
         turnOffDisplay();
@@ -154,7 +159,7 @@ void postSprayState() {
 
 void waitingState() {
     debug("waiting");
-    remainingStateMillis -= (millis() - lastLoopMillis);
+    remainingStateMillis -= (nowMillis - lastLoopMillis);
     if (remainingStateMillis <= 0) {
         // Transition to next state if there are sprays left or stay in this one if there are not
         if (spraysRemaining > 0) {
@@ -202,6 +207,7 @@ void turnOffDisplay() {
 }
 
 void doDisplay() {
+    debug("Do display");
     // Turn on the display, and setup the display state to wait
     turnOnDisplay();
     remainingDisplayTime = SHORT_DISPLAY_TIME;
@@ -209,60 +215,99 @@ void doDisplay() {
 }
 
 void doReset() {
+    debug("Do reset");
     // Someone has refilled the tank and pressed the reset button,
     // reset the number of sprays to the maximum for the tank.
     spraysRemaining = MAX_SPRAYS;
 }
 
 void doCheckButtons() {
+#ifdef DEBUG_DEBOUNCE
+    char * buffer = (char *) malloc(80 * sizeof(char));
+#endif
+
+    debug("Do check buttons");
     // Check the reset button first
     int resetButtonRead = digitalRead(RESET_PIN);
 
+#ifdef DEBUG_DEBOUNCE
+    debug((resetButtonRead == LOW ? "RESET LOW" : "RESET HIGH"));
+#endif
+
     // If it changed, reset the debounce time
     if (resetButtonRead != lastResetButtonState) {
-        lastResetButtonDebounceTime = millis();
+        lastResetButtonState = resetButtonRead;
+        lastResetButtonDebounceTime = nowMillis;
     }
 
-    if ((millis() - lastResetButtonDebounceTime) > DEBOUNCE_DELAY) {
+#ifdef DEBUG_DEBOUNCE
+    sprintf(buffer, "Current reset debounce time: %ld -- %ld %ld", (nowMillis - lastResetButtonDebounceTime), nowMillis, lastResetButtonDebounceTime);
+  debug(buffer);
+#endif DEBUG_DEBOUNCE
+
+    if ((nowMillis - lastResetButtonDebounceTime) > DEBOUNCE_DELAY) {
         // This state has held long enough to be debounced so chage the current state if not
         // already the same:
 
-        if (resetButtonRead != lastResetButtonState) {
-            lastResetButtonState = resetButtonRead;
-            // If it changed to being pressed, do the reset.
-            if(resetButtonRead = HIGH) {
-                doReset();
-            }
+#ifdef DEBUG_DEBOUNCE
+        debug("Reset button surpassed debounce delay");
+#endif
+        // If it changed to being pressed, do the reset.
+        if (resetButtonRead == LOW) {
+            doReset();
         }
     }
 
     // Now check the display button since that still has a delay in it.. :(
     int displayButtonRead = digitalRead(DISPLAY_PIN);
 
+#ifdef DEBUG_DEBOUNCE
+    debug((displayButtonRead == LOW ? "DISPLAY LOW" : "DISPLAY HIGH"));
+  debug((lastDisplayButtonState == LOW ? "LAST DISPLAY STATE LOW" : "LAST DISPLAY STATE HIGH"));
+#endif
+
     // If it changed, reset the debounce time
     if (displayButtonRead != lastDisplayButtonState) {
-        lastDisplayButtonDebounceTime = millis();
+#ifdef DEBUG_DEBOUNCE
+        debug("Updating last display debounce time.");
+#endif
+        lastDisplayButtonDebounceTime = nowMillis;
+        lastDisplayButtonState = displayButtonRead;
     }
 
-    if ((millis() - lastDisplayButtonDebounceTime) > DEBOUNCE_DELAY) {
+#ifdef DEBUG_DEBOUNCE
+    sprintf(buffer, "Current display debounce time: %ld -- %ld %ld", (nowMillis - lastDisplayButtonDebounceTime), nowMillis, lastDisplayButtonDebounceTime);
+  debug(buffer);
+#endif
+
+    if ((nowMillis - lastDisplayButtonDebounceTime) > DEBOUNCE_DELAY) {
         // This state has held long enough to be debounced so chage the current state if not
         // already the same:
 
-        if (displayButtonRead != lastDisplayButtonState) {
-            lastDisplayButtonState = displayButtonRead;
-            // If it changed to being pressed, do the display.
-            if(displayButtonRead = HIGH) {
-                doDisplay();
-            }
+#ifdef DEBUG_DEBOUNCE
+        debug("Display button surpassed debounce delay");
+#endif
+        // If it changed to being pressed, do the display.
+        if (displayButtonRead == LOW) {
+            doDisplay();
         }
     }
 
+#ifdef DEBUG_DEBOUNCE
+    free(buffer);
+#endif
 }
 
 void debug(char * buffer) {
+#ifdef LCD_DEBUG
     lcd.display();
-    lcd.setCursor(0,1);
-    lcd.print("                ");
-    lcd.setCursor(0,1);
-    lcd.print(buffer);
+  lcd.setCursor(0,1);
+  lcd.print("                ");
+  lcd.setCursor(0,1);
+  lcd.print(buffer);
+#endif
+#ifdef SERIAL_DEBUG
+    Serial.println(buffer);
+#endif
 }
+
