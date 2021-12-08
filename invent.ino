@@ -8,7 +8,8 @@ const int MAX_SPRAYS = 10;      // Number of sprays when refilled
 const byte RESET_PIN = 5;   // Pin for reset button
 const byte DISPLAY_PIN = 3; // Pin for display button
 
-const byte SPRAY_RELAY_PIN = 7; // Pin to control power relay to spray
+const byte SPRAY_RELAY_PIN_1 = 7; // Pins to control power relay to pump
+const byte SPRAY_RELAY_PIN_2 = 2; // Pins to control power relay to pump
 
 const unsigned long DEBOUNCE_DELAY = 500UL; // Value to filture button bounces
 
@@ -61,10 +62,12 @@ void setup() {
     pinMode(RESET_PIN, INPUT_PULLUP);
     pinMode(DISPLAY_PIN, INPUT_PULLUP);
 
-    // Set our spray control pin to be output mode
-    // and turn the relay off by setting it to low
-    pinMode(SPRAY_RELAY_PIN, OUTPUT);
-    digitalWrite(SPRAY_RELAY_PIN, LOW);
+    // Set our spray control pins to be output mode
+    // and turn the relay off by setting them to low
+    pinMode(SPRAY_RELAY_PIN_1, OUTPUT);
+    pinMode(SPRAY_RELAY_PIN_2, OUTPUT);
+    digitalWrite(SPRAY_RELAY_PIN_1, LOW);
+    digitalWrite(SPRAY_RELAY_PIN_2, LOW);
 
     // Init LCD and turn off display
     lcd.begin(16,2);
@@ -175,12 +178,14 @@ void turnOnSpray() {
     lcd.clear();
     lcd.display();
     lcd.print("SPRAYING NOW");
-    digitalWrite(SPRAY_RELAY_PIN, HIGH); // Turn on the pin to allow power to flow
+    digitalWrite(SPRAY_RELAY_PIN_1, HIGH); // Turn on the pins to allow power to flow
+    digitalWrite(SPRAY_RELAY_PIN_2, HIGH); // Turn on the pins to allow power to flow
     // through the relay to the spray pump
 }
 
 void turnOffSpray() {
-    digitalWrite(SPRAY_RELAY_PIN, LOW); // Turn off the pin to stop power flow
+    digitalWrite(SPRAY_RELAY_PIN_1, LOW); // Turn off the pins to stop power flow
+    digitalWrite(SPRAY_RELAY_PIN_2, LOW); // Turn off the pins to stop power flow
     // through the relay to the spray pump
     lcd.noDisplay();
 }
