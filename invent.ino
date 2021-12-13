@@ -8,10 +8,10 @@ const int MAX_SPRAYS = 10;      // Number of sprays when refilled
 const byte RESET_PIN = 5;   // Pin for reset button
 const byte DISPLAY_PIN = 3; // Pin for display button
 
-const byte SPRAY_RELAY_PIN_1 = 7; // Pins to control power relay to pump
-const byte SPRAY_RELAY_PIN_2 = 2; // Pins to control power relay to pump
+const byte SPRAY_RELAY_PIN = 7; // Pin to control power relay to pump
 
-const unsigned long DEBOUNCE_DELAY = 500UL; // Value to filture button bounces
+const unsigned long SHORT_DEBOUNCE_DELAY = 500UL; // Value to filter short button bounces (.5s)
+const unsigned long LONG_DEBOUNCE_DELAY = 10000UL; // Value to filter long button bounces (10s)
 
 const unsigned long PRE_SPRAY_TIME     = 1000UL * 60; // ms * seconds = 1 minute
 const unsigned long POST_SPRAY_TIME    = 1000UL * 60; // ms * seconds = 1 minute
@@ -64,10 +64,8 @@ void setup() {
 
     // Set our spray control pins to be output mode
     // and turn the relay off by setting them to low
-    pinMode(SPRAY_RELAY_PIN_1, OUTPUT);
-    pinMode(SPRAY_RELAY_PIN_2, OUTPUT);
-    digitalWrite(SPRAY_RELAY_PIN_1, LOW);
-    digitalWrite(SPRAY_RELAY_PIN_2, LOW);
+    pinMode(SPRAY_RELAY_PIN, OUTPUT);
+    digitalWrite(SPRAY_RELAY_PIN, LOW);
 
     // Init LCD and turn off display
     lcd.begin(16,2);
@@ -178,14 +176,12 @@ void turnOnSpray() {
     lcd.clear();
     lcd.display();
     lcd.print("SPRAYING NOW");
-    digitalWrite(SPRAY_RELAY_PIN_1, HIGH); // Turn on the pins to allow power to flow
-    digitalWrite(SPRAY_RELAY_PIN_2, HIGH); // Turn on the pins to allow power to flow
+    digitalWrite(SPRAY_RELAY_PIN, HIGH); // Turn on the pin to allow power to flow
     // through the relay to the spray pump
 }
 
 void turnOffSpray() {
-    digitalWrite(SPRAY_RELAY_PIN_1, LOW); // Turn off the pins to stop power flow
-    digitalWrite(SPRAY_RELAY_PIN_2, LOW); // Turn off the pins to stop power flow
+    digitalWrite(SPRAY_RELAY_PIN, LOW); // Turn off the pin to stop power flow
     // through the relay to the spray pump
     lcd.noDisplay();
 }
@@ -231,37 +227,37 @@ void doCheckButtons() {
     char * buffer = (char *) malloc(80 * sizeof(char));
 #endif
 
-    debug("Do check buttons");
-    // Check the reset button first
-    int resetButtonRead = digitalRead(RESET_PIN);
+//    debug("Do check buttons");
+//    // Check the reset button first
+//    int resetButtonRead = digitalRead(RESET_PIN);
 
 #ifdef DEBUG_DEBOUNCE
-    debug((resetButtonRead == LOW ? "RESET LOW" : "RESET HIGH"));
+//    debug((resetButtonRead == LOW ? "RESET LOW" : "RESET HIGH"));
 #endif
 
     // If it changed, reset the debounce time
-    if (resetButtonRead != lastResetButtonState) {
-        lastResetButtonState = resetButtonRead;
-        lastResetButtonDebounceTime = nowMillis;
-    }
+//    if (resetButtonRead != lastResetButtonState) {
+//        lastResetButtonState = resetButtonRead;
+//        lastResetButtonDebounceTime = nowMillis;
+//    }
 
 #ifdef DEBUG_DEBOUNCE
-    sprintf(buffer, "Current reset debounce time: %ld -- %ld %ld", (nowMillis - lastResetButtonDebounceTime), nowMillis, lastResetButtonDebounceTime);
-  debug(buffer);
+//    sprintf(buffer, "Current reset debounce time: %ld -- %ld %ld", (nowMillis - lastResetButtonDebounceTime), nowMillis, lastResetButtonDebounceTime);
+//  debug(buffer);
 #endif DEBUG_DEBOUNCE
 
-    if ((nowMillis - lastResetButtonDebounceTime) > DEBOUNCE_DELAY) {
+//    if ((nowMillis - lastResetButtonDebounceTime) > SHORT_DEBOUNCE_DELAY) {
         // This state has held long enough to be debounced so chage the current state if not
         // already the same:
 
 #ifdef DEBUG_DEBOUNCE
-        debug("Reset button surpassed debounce delay");
+//        debug("Reset button surpassed debounce delay");
 #endif
         // If it changed to being pressed, do the reset.
-        if (resetButtonRead == LOW) {
-            doReset();
-        }
-    }
+//        if (resetButtonRead == LOW) {
+//            doReset();
+//        }
+//    }
 
     // Now check the display button since that still has a delay in it.. :(
     int displayButtonRead = digitalRead(DISPLAY_PIN);
@@ -285,16 +281,27 @@ void doCheckButtons() {
   debug(buffer);
 #endif
 
-    if ((nowMillis - lastDisplayButtonDebounceTime) > DEBOUNCE_DELAY) {
-        // This state has held long enough to be debounced so chage the current state if not
-        // already the same:
+    if ((nowMillis - lastDisplayButtonDebounceTime) > SHORT_DEBOUNCE_DELAY) {
+        // This state has held long enough to be debounced so do the short press action.
 
 #ifdef DEBUG_DEBOUNCE
-        debug("Display button surpassed debounce delay");
+        debug("Button surpassed short debounce delay");
 #endif
         // If it changed to being pressed, do the display.
         if (displayButtonRead == LOW) {
             doDisplay();
+        }
+    }
+
+    if ((nowMillis - lastDisplayButtonDebounceTime) > LONG_DEBOUNCE_DELAY) {
+        // This state has held long enough to be debounced so do the long press action.
+
+#ifdef DEBUG_DEBOUNCE
+        debug("Button surpassed long debounce delay");
+#endif
+        // If it changed to being pressed, do the display.
+        if (displayButtonRead == LOW) {
+            doReset();
         }
     }
 
