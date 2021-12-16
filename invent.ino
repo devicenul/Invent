@@ -8,7 +8,7 @@ const int MAX_SPRAYS = 10;      // Number of sprays when refilled
 const byte RESET_PIN = 5;   // Pin for reset button
 const byte DISPLAY_PIN = 3; // Pin for display button
 
-const byte SPRAY_RELAY_PIN = 7; // Pin to control power relay to pump
+const byte SPRAY_RELAY_PIN = 2; // Pin to control power relay to pump
 
 const unsigned long SHORT_DEBOUNCE_DELAY = 500UL; // Value to filter short button bounces (.5s)
 const unsigned long LONG_DEBOUNCE_DELAY = 10000UL; // Value to filter long button bounces (10s)
@@ -59,7 +59,7 @@ void setup() {
     currentState = PRE_SPRAY_STATE;
 
     // Set our button pins to be input mode
-    pinMode(RESET_PIN, INPUT_PULLUP);
+    //pinMode(RESET_PIN, INPUT_PULLUP);
     pinMode(DISPLAY_PIN, INPUT_PULLUP);
 
     // Set our spray control pins to be output mode
@@ -232,7 +232,7 @@ void doCheckButtons() {
 //    int resetButtonRead = digitalRead(RESET_PIN);
 
 #ifdef DEBUG_DEBOUNCE
-//    debug((resetButtonRead == LOW ? "RESET LOW" : "RESET HIGH"));
+    //    debug((resetButtonRead == LOW ? "RESET LOW" : "RESET HIGH"));
 #endif
 
     // If it changed, reset the debounce time
@@ -242,18 +242,18 @@ void doCheckButtons() {
 //    }
 
 #ifdef DEBUG_DEBOUNCE
-//    sprintf(buffer, "Current reset debounce time: %ld -- %ld %ld", (nowMillis - lastResetButtonDebounceTime), nowMillis, lastResetButtonDebounceTime);
+    //    sprintf(buffer, "Current reset debounce time: %ld -- %ld %ld", (nowMillis - lastResetButtonDebounceTime), nowMillis, lastResetButtonDebounceTime);
 //  debug(buffer);
 #endif DEBUG_DEBOUNCE
 
 //    if ((nowMillis - lastResetButtonDebounceTime) > SHORT_DEBOUNCE_DELAY) {
-        // This state has held long enough to be debounced so chage the current state if not
-        // already the same:
+    // This state has held long enough to be debounced so chage the current state if not
+    // already the same:
 
 #ifdef DEBUG_DEBOUNCE
-//        debug("Reset button surpassed debounce delay");
+    //        debug("Reset button surpassed debounce delay");
 #endif
-        // If it changed to being pressed, do the reset.
+    // If it changed to being pressed, do the reset.
 //        if (resetButtonRead == LOW) {
 //            doReset();
 //        }
@@ -322,4 +322,3 @@ void debug(char * buffer) {
     Serial.println(buffer);
 #endif
 }
-
